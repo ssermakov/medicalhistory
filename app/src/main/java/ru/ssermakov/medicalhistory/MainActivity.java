@@ -68,17 +68,17 @@ public class MainActivity extends AppCompatActivity implements Callback<Result> 
         return super.onCreateOptionsMenu(menu);
     }
 
-    void showToast () {
-        Toast.makeText(this, "Toast", Toast.LENGTH_LONG).show();
+    void showToast (String s) {
+        Toast.makeText(this, s, Toast.LENGTH_LONG).show();
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.fm_add_patient) {
-            showToast();
+            showToast("Add");
         }
         if (item.getItemId() == R.id.fm_search_patient) {
-            showToast();
+            showToast("Search");
         }
         return super.onOptionsItemSelected(item);
     }
