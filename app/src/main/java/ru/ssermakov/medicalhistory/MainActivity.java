@@ -38,18 +38,6 @@ public class MainActivity extends AppCompatActivity implements Callback<Result> 
         recyclerView.setHasFixedSize(true);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-//        patientList.add(
-//                new Patient(
-//                        "Катя",
-//                        "Здорова",
-//                        R.drawable.kate));
-//
-//        patientList.add(
-//                new Patient(
-//                        "Коля",
-//                        "Болен",
-//                        R.drawable.kolya));
-
         retrofit = new Retrofit.Builder()
                 .baseUrl("http://192.168.1.11:8080")
                 .addConverterFactory(GsonConverterFactory.create())
@@ -57,7 +45,7 @@ public class MainActivity extends AppCompatActivity implements Callback<Result> 
 
         service = retrofit.create(DbService.class);
 
-        Call<Result> call = service.search();
+        Call<Result> call = service.getChildren();
         call.enqueue(this);
 
     }
@@ -102,6 +90,6 @@ public class MainActivity extends AppCompatActivity implements Callback<Result> 
 
     @Override
     public void onFailure(Call<Result> call, Throwable t) {
-
+        showToast("Something wrong");
     }
 }
