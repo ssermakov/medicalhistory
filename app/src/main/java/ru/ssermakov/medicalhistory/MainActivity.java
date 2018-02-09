@@ -1,5 +1,6 @@
 package ru.ssermakov.medicalhistory;
 
+import android.app.DialogFragment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
@@ -17,7 +18,9 @@ import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-public class MainActivity extends AppCompatActivity implements Callback<Result> {
+public class MainActivity extends AppCompatActivity implements AddPatientEventListener {
+//implements Callback<Result>,
+
 
     private RecyclerView recyclerView;
     private List<Patient> patientList;
@@ -26,6 +29,8 @@ public class MainActivity extends AppCompatActivity implements Callback<Result> 
     private DbService service;
     private Retrofit retrofit;
     private boolean loading = false;
+
+    private DialogFragment addPatientDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,15 +43,32 @@ public class MainActivity extends AppCompatActivity implements Callback<Result> 
         recyclerView.setHasFixedSize(true);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        retrofit = new Retrofit.Builder()
-                .baseUrl("http://192.168.1.11:8080")
-                .addConverterFactory(GsonConverterFactory.create())
-                .build();
 
-        service = retrofit.create(DbService.class);
+        App.getDbService().getChildren().enqueue(new Callback<Result>() {
+            @Override
+            public void onResponse(Call<Result> call, Response<Result> response) {
+                if (response.body().getStat().equals("ok")) {
+                    Children body = (response.body().getChildren());
+                    for (Child r : body.getChild()){
+                        patientList.add(
+                                new Patient(
+                                        r.getName(),
+                                        r.getCurrentState(),
+                                        R.drawable.kate));
+                    }
+                }
+                patientAdapter = new PatientAdapter(MainActivity.this, patientList);
+                recyclerView.setAdapter(patientAdapter);
+                loading = false;
+            }
 
-        Call<Result> call = service.getChildren();
-        call.enqueue(this);
+            @Override
+            public void onFailure(Call<Result> call, Throwable t) {
+                showToast("Something wrong");
+            }
+        });
+
+        addPatientDialog = new AddPatientDialog();
 
     }
 
@@ -63,7 +85,7 @@ public class MainActivity extends AppCompatActivity implements Callback<Result> 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.fm_add_patient) {
-            showToast("Add");
+            showAddPatientDialog();
         }
         if (item.getItemId() == R.id.fm_search_patient) {
             showToast("Search");
@@ -71,25 +93,13 @@ public class MainActivity extends AppCompatActivity implements Callback<Result> 
         return super.onOptionsItemSelected(item);
     }
 
-    @Override
-    public void onResponse(Call<Result> call, Response<Result> response) {
-        if (response.body().getStat().equals("ok")) {
-            Children body = (response.body().getChildren());
-            for (Child r : body.getChild()){
-                patientList.add(
-                        new Patient(
-                                r.getName(),
-                                r.getCurrentState(),
-                                R.drawable.kate));
-            }
-        }
-        patientAdapter = new PatientAdapter(this, patientList);
-        recyclerView.setAdapter(patientAdapter);
-        loading = false;
+    private void showAddPatientDialog() {
+        addPatientDialog.show(getFragmentManager(), "addPatientDialog");
     }
 
     @Override
-    public void onFailure(Call<Result> call, Throwable t) {
-        showToast("Something wrong");
+    public void addPatient(String patientName) {
+        patientList.add(new Patient(patientName, "", R.drawable.kate));
+        patientAdapter.notifyDataSetChanged();
     }
 }

@@ -6,7 +6,7 @@ import retrofit2.http.GET;
 
 public interface DbService {
 
-    @GET("/medicalhystory/getChildren.php")
+    @GET("/medicalhistory/getChildren.php")
     Call<Result> getChildren ();
 
 
