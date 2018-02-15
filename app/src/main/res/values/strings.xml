@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">MedicalHistory</string>
+    <string name="add_a_patient">Add a Patient</string>
+    <string name="enter_a_name">Enter a name</string>
 </resources>

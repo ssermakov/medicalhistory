@@ -1,29 +1,27 @@
 package ru.ssermakov.medicalhistory;
 
 import android.app.DialogFragment;
+import android.content.ContentValues;
+import android.database.Cursor;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.helper.ItemTouchHelper;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
 import java.util.ArrayList;
-import java.util.List;
 
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MainActivity extends AppCompatActivity implements AddPatientEventListener {
 //implements Callback<Result>,
 
 
     private RecyclerView recyclerView;
-    private List<Patient> patientList;
+    private ArrayList<Patient> patientList;
     private PatientAdapter patientAdapter;
 
     private DbService service;
@@ -31,6 +29,10 @@ public class MainActivity extends AppCompatActivity implements AddPatientEventLi
     private boolean loading = false;
 
     private DialogFragment addPatientDialog;
+    private DBHelper helper;
+    private Cursor cursor;
+
+    private ItemTouchHelper itemTouchHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,9 +44,46 @@ public class MainActivity extends AppCompatActivity implements AddPatientEventLi
         recyclerView = findViewById(R.id.f_recycler);
         recyclerView.setHasFixedSize(true);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        helper = new DBHelper(this);
+
+        cursor = getAllPatientsFromLocalDB();
+
+//        patientList = createPatientList(); для удаленной БД
+        patientAdapter = new PatientAdapter(MainActivity.this, patientList, cursor);
+        recyclerView.setAdapter(patientAdapter);
+
+        itemTouchHelper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0,
+                ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
+            @Override
+            public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
+                return false;
+            }
+
+            @Override
+            public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+                removeItem((long) viewHolder.itemView.getTag());
+            }
+        });
+        itemTouchHelper.attachToRecyclerView(recyclerView);
+
+        addPatientDialog = new AddPatientDialog();
 
 
-        App.getDbService().getChildren().enqueue(new Callback<Result>() {
+
+
+
+
+
+
+
+
+
+
+
+//Метод загрузки данных с сервера via Retrofit и занесения данных в ресайклер. Закомментирован до разработки серверной части
+
+
+/*        App.getDbService().getChildren().enqueue(new Callback<Result>() {
             @Override
             public void onResponse(Call<Result> call, Response<Result> response) {
                 if (response.body().getStat().equals("ok")) {
@@ -66,11 +105,43 @@ public class MainActivity extends AppCompatActivity implements AddPatientEventLi
             public void onFailure(Call<Result> call, Throwable t) {
                 showToast("Something wrong");
             }
-        });
+        });*/
 
-        addPatientDialog = new AddPatientDialog();
 
     }
+
+    private void removeItem(long tag) {
+        helper.getWritableDatabase().delete(
+                PatientsTable.TABLE_PATIENTS,
+                PatientsTable.COLUMN_ID + "=" + tag,
+                null
+        );
+        patientAdapter.swapCursor(getAllPatientsFromLocalDB());
+    }
+
+    private Cursor getAllPatientsFromLocalDB() {
+        return helper.getReadableDatabase().query(
+                PatientsTable.TABLE_PATIENTS,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+    }
+
+/*    private ArrayList<Patient> createPatientList() {
+        while (cursor.moveToNext()) {
+            Patient patient = new Patient(
+                    cursor.getString(cursor.getColumnIndex(PatientsTable.COLUMN_NAME)),
+                    cursor.getString(cursor.getColumnIndex(PatientsTable.COLUMN_CURRENT_STATE)),
+                    R.drawable.kate
+            );
+            patientList.add(patient);
+        }
+        return patientList;
+    }*/
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -99,7 +170,16 @@ public class MainActivity extends AppCompatActivity implements AddPatientEventLi
 
     @Override
     public void addPatient(String patientName) {
-        patientList.add(new Patient(patientName, "", R.drawable.kate));
-        patientAdapter.notifyDataSetChanged();
+// patientList.add(new Patient(patientName, "1", R.drawable.kate)); для удаленной БД
+
+        ContentValues cv = new ContentValues();
+
+        cv.put(PatientsTable.COLUMN_NAME, patientName);
+        cv.put(PatientsTable.COLUMN_ILLNESS_ID, "0");
+        cv.put(PatientsTable.COLUMN_CURRENT_STATE, "1");
+        cv.put(PatientsTable.COLUMN_IMAGE_URL, "no url");
+
+        helper.getWritableDatabase().insert(PatientsTable.TABLE_PATIENTS, null,cv);
+        patientAdapter.swapCursor(getAllPatientsFromLocalDB());
     }
 }
